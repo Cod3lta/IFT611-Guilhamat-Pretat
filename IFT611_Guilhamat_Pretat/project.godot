@@ -8,11 +8,25 @@
 
 config_version=4
 
+_global_script_classes=[ {
+"base": "Control",
+"class": "Menu",
+"language": "GDScript",
+"path": "res://ui/menu/menu.gd"
+} ]
+_global_script_class_icons={
+"Menu": ""
+}
+
 [application]
 
 config/name="IFT611_Guilhamat_Pretat"
-run/main_scene="res://Game.tscn"
+run/main_scene="res://ui/menu/menuContainer.tscn"
 config/icon="res://icon.png"
+
+[autoload]
+
+Gamestate="*res://scripts/gamestate.gd"
 
 [input]
 

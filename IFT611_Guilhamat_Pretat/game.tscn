@@ -8,4 +8,7 @@
 [node name="Level1" parent="." instance=ExtResource( 1 )]
 
 [node name="Player" parent="." instance=ExtResource( 2 )]
-position = Vector2( 655, 86 )
+position = Vector2( 410, 72 )
+
+[node name="Spawn" type="Position2D" parent="."]
+position = Vector2( 306, 85 )
