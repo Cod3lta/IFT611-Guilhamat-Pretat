@@ -58,8 +58,7 @@ func _player_connected(id):
 	# When a player connects to the server we are already connected on, this slot is activated
 	# We have to tell the newly connected player that we are here.
 	# -> This signal is also emitted server-side when a new clients made a connection
-	if not server_only:
-		rpc_id(id, "register_player", player_name)
+	rpc_id(id, "register_player", player_name)
 
 
 # Callback from SceneTree.
@@ -73,12 +72,16 @@ func _player_disconnected(id):
 		unregister_player(id)
 
 
+# When a player joins the game
+# Called on every peer (server + the currently connecting client + the others clients)
 remote func register_player(new_player_name):
 	var id = get_tree().get_rpc_sender_id()
-	if id == 0:
+	if id == 0: # If sender == reciever
 		id = get_tree().get_network_unique_id()
+	
+	# Add the player to the players list
 	players[id] = new_player_name
-	print("New player registered : " + str(id))
+	print("New player registered with id " + str(id))
 	emit_signal("player_list_changed")
 
 
@@ -135,8 +138,6 @@ func get_players_list():
 
 # Returns the player list except the server (id = 1) if it's present
 func get_clients_list():
-	if self.server_only:
-		return self.get_players_list()
 	var clients = self.players.duplicate()
 	clients.erase(1)
 	return clients
@@ -144,8 +145,6 @@ func get_clients_list():
 func get_player_name():
 	return self.player_name
 
-func get_server_only():
-	return self.server_only
 
 """#################################################
 				THIS INSTANCE AS A CLIENT
@@ -153,7 +152,6 @@ func get_server_only():
 	
 
 func join_game(ip):
-	self.server_only = false
 	self.players.clear()
 	
 	var peer = NetworkedMultiplayerENet.new()
@@ -193,20 +191,16 @@ func _connected_fail():
 
 # This instance clicked the "host" button
 func host_and_play_game():
-	self.server_only = false
-	self.host_game()
+	self.players.clear()
+	
+	# Create the network peer as a server
+	var peer = NetworkedMultiplayerENet.new()
+	peer.create_server(DEFAULT_PORT, MAX_PEERS)
+	print("Server created")
+	get_tree().set_network_peer(peer)
 	
 	self.player_name = "username"
 	self.register_player(self.player_name)
-
-
-# This instance clicked the "host only" button
-func host_game():
-	self.players.clear()
-	
-	var peer = NetworkedMultiplayerENet.new()
-	peer.create_server(DEFAULT_PORT, MAX_PEERS)
-	get_tree().set_network_peer(peer)
 
 
 # Called by a client to tell the server he's ready
