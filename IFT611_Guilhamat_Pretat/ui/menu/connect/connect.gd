@@ -4,11 +4,12 @@ extends Menu
 onready var players_list = $HBoxContainer/VBoxContainer2/ItemList
 onready var start_button = $HBoxContainer/VBoxContainer/Start
 
-const MIN_PLAYERS = 2
+const MIN_PLAYERS = 1
 
 # Called when the node enters the scene tree for the first time.
 func _ready():
 	Gamestate.connect("player_list_changed", self, "refresh_waiting_room")
+	Gamestate.connect("game_error", self, "game_error")
 
 
 func refresh_waiting_room():
@@ -31,6 +32,18 @@ func refresh_waiting_room():
 		start_button.hide()
 
 
-func _on_Leave_pressed():
+func leave_game():
 	get_tree().network_peer = null
 	emit_signal("set_menu", "res://ui/menu/main/main.tscn")
+
+func game_error(error):
+	if error == "Server disconnected":
+		get_tree().network_peer = null
+		emit_signal(
+			"set_menu", 
+			"res://ui/menu/main/main.tscn", 
+			{"error_message": "The server was disconnected"})
+
+# The server instance pressed the "start" button
+func _on_Start_pressed():
+	Gamestate.begin_game()

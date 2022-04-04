@@ -9,7 +9,7 @@ func _ready():
 	connect_current_menu()
 
 
-func set_menu(path: String, parameters: Array = []):
+func set_menu(path: String, parameters: Dictionary = {}):
 	old_menu = current_menu
 	current_menu = load(path).instance()
 	

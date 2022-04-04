@@ -45,4 +45,5 @@ margin_right = 510.0
 margin_bottom = 44.0
 text = "Démarrer la partie"
 
-[connection signal="pressed" from="HBoxContainer/VBoxContainer/Leave" to="." method="_on_Leave_pressed"]
+[connection signal="pressed" from="HBoxContainer/VBoxContainer/Leave" to="." method="leave_game"]
+[connection signal="pressed" from="HBoxContainer/VBoxContainer/Start" to="." method="_on_Start_pressed"]
