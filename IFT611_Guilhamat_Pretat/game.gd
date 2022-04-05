@@ -33,8 +33,11 @@ func init_client(players_init: Dictionary):
 		
 		# Set the player's camera as the main one if we are controling it
 		p.get_node("Camera").current = get_tree().get_network_unique_id() == id
-
+		
 		$Players.add_child(p)
+
+		# Connect the player's signals
+		p.connect("die", self, "player_die")
 
 func init_server():
 	pass
@@ -42,3 +45,6 @@ func init_server():
 func set_main_player():
 	# Connects the joystick's signal to the player of this instance
 	pass
+
+func player_die(player: KinematicBody2D):
+	player.set_position($Spawn.get_position())

@@ -13,6 +13,8 @@ var input_x: float # The player's key input
 puppet var puppet_velocity = Vector2.ZERO
 puppet var puppet_position = Vector2.ZERO
 
+signal die(player)
+
 # Called when the node enters the scene tree for the first time.
 func _ready():
 	pass
@@ -63,15 +65,22 @@ func multiplayer_movements():
 
 func apply_movements():
 	# Already uses delta in it's implementation
-	move_and_slide(velocity, Vector2.UP)
+	velocity  = move_and_slide(velocity, Vector2.UP)
+	# print(collision)
 
 func jump():
 	if Input.is_action_just_pressed("game_jump") and is_on_floor():
 		velocity.y = -JUMP_AMOUNT
 
 func animate():
-	if abs(input_x) > 0:
+	if not is_on_floor():
+		$AnimationPlayer.play("jump")
+	elif abs(input_x) > 0.1:
 		$AnimationPlayer.play("walking")
 	else:
 		$AnimationPlayer.play("idle")
 	$Sprite.flip_h = velocity.x < 0
+
+
+func _on_DeathDetector_body_entered(body):
+	emit_signal("die", self)
