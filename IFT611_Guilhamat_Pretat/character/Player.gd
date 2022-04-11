@@ -23,9 +23,9 @@ puppet var remote_vel = Vector2()
 
 #client server reconciliation
 export var csr = true # Client Server Reconciliation
-puppet var ack = 0 # Last movement acknowledged
 var old_movement = Vector2()
 var time = 0
+var lastTime = 0
 
 
 signal die(player)
@@ -33,7 +33,7 @@ signal checkpoint(position)
 
 # Called when the node enters the scene tree for the first time.
 func _ready():
-	set_network_master(1)
+	pass
 
 func init(color_id: int, pos: Vector2):
 	$Sprite.set_texture(load("res://character/player-" + str(color_id) + ".png"))
@@ -76,11 +76,17 @@ func get_gravity():
 
 func multiplayer_movements(delta):
 	if is_network_master():
-		# TODO : don't send the position and velocity in every frame
+		if csr:
+			rpc_unreliable("update_state",transform, velocity, time)
+		else:
+			rset_unreliable("remote_transform",transform)
+		
 		rset_unreliable("puppet_velocity", velocity) # used for the puppet's animations
 		rset_unreliable("puppet_position", position)
 	else:
 		time += delta
+		if csr:
+			move_with_reconciliation()
 		position = puppet_position
 		velocity = puppet_velocity
 
@@ -136,7 +142,7 @@ func _on_FinishDetector_body_entered(body):
 	$EndParticle.restart()
 
 
-func move_with_reconciliation(delta):
+func move_with_reconciliation():
 	var old_transform = transform
 	transform = remote_transform
 	var vel = remote_vel
@@ -145,10 +151,11 @@ func move_with_reconciliation(delta):
 	interpolate(old_transform)
 
 func interpolate(old_transform):
-	var timeBetween # TODO add the time between the two last received 
+	var timeBetween = time - lastTime
+	lastTime = time
 	transform.origin = old_transform.origin.linear_interpolate(transform.origin,timeBetween)
 
-puppet func update_state(t, velocity, ack):
+puppet func update_state(t, velocity, lastTime_):
 	self.remote_transform = t
 	self.remote_vel = velocity
-	self.ack = ack
+	self.lastTime = lastTime_
