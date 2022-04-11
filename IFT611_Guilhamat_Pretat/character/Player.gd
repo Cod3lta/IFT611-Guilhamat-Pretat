@@ -92,6 +92,7 @@ func apply_movements():
 func jump():
 	if Input.is_action_just_pressed("game_jump") and is_on_floor():
 		velocity.y = -JUMP_AMOUNT
+		$JumpParticle.restart()
 
 func animate():
 	if not is_on_floor():
@@ -100,8 +101,13 @@ func animate():
 		$AnimationPlayer.play("walking")
 	else:
 		$AnimationPlayer.play("idle")
+	
 	$Sprite.flip_h = velocity.x < 0
-
+	
+	if abs(velocity.x) > 3 and is_on_floor(): 
+		$FootstepsParticle.set_emitting(true)
+	else:
+		$FootstepsParticle.set_emitting(false)
 
 func _on_DeathDetector_body_entered(body):
 	if not is_network_master(): return
