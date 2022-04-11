@@ -114,10 +114,9 @@ remote func pre_start_game(players_init: Dictionary):
 
 remote func post_start_game():
 	var game = get_node("/root/Game")
-	game.set_main_player()
 	get_tree().set_pause(false) # Unpause and unleash the game!
 
-func end_game():
+remote func end_game():
 	if has_node("/root/Game"): # Game is in progress.
 		get_node("/root/Game").queue_free() # End it
 		get_tree().get_root().add_child(load("res://ui/menu/menuContainer.tscn").instance())
@@ -209,6 +208,8 @@ remote func ready_to_start():
 		for player_id in self.get_clients_list():
 			rpc_id(player_id, "post_start_game")
 		post_start_game()
+		
+		id_players_ready = []
 
 # This instance (the server) pressed on the button "START"
 func begin_game():
@@ -232,3 +233,18 @@ func begin_game():
 	for id in self.get_clients_list():
 		rpc_id(id, "pre_start_game", players_init)
 	pre_start_game(players_init)
+
+remote func player_reached_finish(): # When a player reaches the end of the game
+	assert(get_tree().is_network_server())
+	var id = get_tree().get_rpc_sender_id()
+	
+	if not id in id_players_ready:
+		id_players_ready.append(id)
+	
+	if id_players_ready.size() == players.size():
+		# If everyone has finished the game
+		for player_id in self.get_clients_list():
+			rpc_id(player_id, "end_game")
+		end_game()
+		
+		id_players_ready = []

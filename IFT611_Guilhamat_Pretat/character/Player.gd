@@ -15,6 +15,8 @@ var respawn_point: Vector2 = Vector2.ZERO
 puppet var puppet_velocity = Vector2.ZERO
 puppet var puppet_position = Vector2.ZERO
 
+var playable:bool = true
+
 signal die(player)
 signal checkpoint(position)
 
@@ -29,17 +31,19 @@ func init(color_id: int, pos: Vector2):
 
 # Called every frame. 'delta' is the elapsed time since the previous frame.
 func _process(delta):
+	animate()
+	
+
+func _physics_process(delta):
 	get_on_floor()
-	get_input()
+	if playable:
+		get_input()
 	get_gravity()
 	
 	jump()
 	
 	multiplayer_movements()
 	apply_movements()
-	
-	animate()
-
 
 func get_on_floor():
 	if is_on_floor():
@@ -56,7 +60,7 @@ func get_input():
 			velocity.x = lerp(velocity.x, target_speed, 0.3) # Slow down
 
 func get_gravity():
-	if !is_on_floor() and velocity.y < MAX_SPEED.y:
+	if velocity.y < MAX_SPEED.y:
 		velocity.y += GRAVITY
 
 func multiplayer_movements():
@@ -88,13 +92,27 @@ func animate():
 
 
 func _on_DeathDetector_body_entered(body):
+	if not is_network_master(): return
 	position = respawn_point
 
 
 func _on_CheckpointDetector_body_entered(body):
+	if not is_network_master(): return
 	if not body is TileMap: return
 	emit_signal("checkpoint", self.position)
 	respawn_point = position
 	print(body.get_position())
 	$CheckpointParticle.restart()
 	
+
+
+func _on_FinishDetector_body_entered(body):
+	if not is_network_master(): return
+	if get_tree().is_network_server():
+		Gamestate.player_reached_finish()
+	else:
+		Gamestate.rpc_id(1, "player_reached_finish")
+	
+	playable = false
+	velocity = Vector2.ZERO
+	$EndParticle.restart()

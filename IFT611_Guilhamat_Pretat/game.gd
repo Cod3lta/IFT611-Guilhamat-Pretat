@@ -13,6 +13,8 @@ func _ready():
 
 func init(players: Dictionary):
 	init_client(players)
+	
+	
 	if get_tree().is_network_server():
 		init_server()
 
@@ -42,7 +44,5 @@ func init_client(players_init: Dictionary):
 func init_server():
 	pass
 
-func set_main_player():
-	# Connects the joystick's signal to the player of this instance
+func game_ended():
 	pass
-
