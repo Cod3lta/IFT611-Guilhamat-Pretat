@@ -22,7 +22,10 @@ _global_script_class_icons={
 
 config/name="IFT611_Guilhamat_Pretat"
 run/main_scene="res://ui/menu/menuContainer.tscn"
-config/icon="res://icon.png"
+boot_splash/image="res://assets/Tiles/tile_0019.png"
+boot_splash/fullsize=false
+boot_splash/use_filter=false
+config/icon="res://assets/Tiles/tile_0019.png"
 
 [autoload]
 
@@ -71,6 +74,7 @@ game_jump={
 2d_physics/layer_3="1-way platforms"
 2d_physics/layer_4="finish"
 2d_physics/layer_5="death"
+2d_physics/layer_6="checkpoint"
 
 [physics]
 

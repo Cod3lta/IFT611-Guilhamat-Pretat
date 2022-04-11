@@ -10,17 +10,22 @@ var horisontal_speed = 0
 var velocity = Vector2.ZERO
 var input_x: float # The player's key input
 
+var respawn_point: Vector2 = Vector2.ZERO
+
 puppet var puppet_velocity = Vector2.ZERO
 puppet var puppet_position = Vector2.ZERO
 
 signal die(player)
+signal checkpoint(position)
 
 # Called when the node enters the scene tree for the first time.
 func _ready():
 	pass
 
-func init(color_id: int):
+func init(color_id: int, pos: Vector2):
 	$Sprite.set_texture(load("res://character/player-" + str(color_id) + ".png"))
+	respawn_point = pos
+	position = pos
 
 # Called every frame. 'delta' is the elapsed time since the previous frame.
 func _process(delta):
@@ -75,7 +80,7 @@ func jump():
 func animate():
 	if not is_on_floor():
 		$AnimationPlayer.play("jump")
-	elif abs(input_x) > 0.1:
+	elif abs(velocity.x) > 3:
 		$AnimationPlayer.play("walking")
 	else:
 		$AnimationPlayer.play("idle")
@@ -83,4 +88,13 @@ func animate():
 
 
 func _on_DeathDetector_body_entered(body):
-	emit_signal("die", self)
+	position = respawn_point
+
+
+func _on_CheckpointDetector_body_entered(body):
+	if not body is TileMap: return
+	emit_signal("checkpoint", self.position)
+	respawn_point = position
+	print(body.get_position())
+	$CheckpointParticle.restart()
+	

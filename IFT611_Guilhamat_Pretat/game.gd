@@ -26,10 +26,10 @@ func init_client(players_init: Dictionary):
 		
 		var p = player_scene.instance()
 		
-		p.init(p_init["color_id"])
+		# Init with color and position
+		p.init(p_init["color_id"], $Spawn.get_position())
 		p.set_name(str(id)) # Use unique ID as node name
 		p.set_network_master(id) #set unique id as master
-		p.set_position($Spawn.get_position())
 		
 		# Set the player's camera as the main one if we are controling it
 		p.get_node("Camera").current = get_tree().get_network_unique_id() == id
@@ -37,7 +37,7 @@ func init_client(players_init: Dictionary):
 		$Players.add_child(p)
 
 		# Connect the player's signals
-		p.connect("die", self, "player_die")
+		p.connect("checkpoint", $Level1, "player_checkpoint")
 
 func init_server():
 	pass
@@ -46,5 +46,3 @@ func set_main_player():
 	# Connects the joystick's signal to the player of this instance
 	pass
 
-func player_die(player: KinematicBody2D):
-	player.set_position($Spawn.get_position())

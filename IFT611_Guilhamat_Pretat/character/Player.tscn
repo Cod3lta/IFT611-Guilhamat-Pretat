@@ -1,4 +1,4 @@
-[gd_scene load_steps=8 format=2]
+[gd_scene load_steps=11 format=2]
 
 [ext_resource path="res://character/Player.gd" type="Script" id=2]
 [ext_resource path="res://character/player-0.png" type="Texture" id=3]
@@ -59,6 +59,30 @@ tracks/0/keys = {
 [sub_resource type="CircleShape2D" id=5]
 radius = 5.0
 
+[sub_resource type="Gradient" id=7]
+colors = PoolColorArray( 1, 0.75, 0, 1, 1, 0, 0.679688, 1 )
+
+[sub_resource type="GradientTexture" id=8]
+gradient = SubResource( 7 )
+
+[sub_resource type="ParticlesMaterial" id=9]
+lifetime_randomness = 0.23
+flag_disable_z = true
+spread = 180.0
+gravity = Vector3( 0, 98, 0 )
+initial_velocity = 72.33
+initial_velocity_random = 0.24
+orbit_velocity = 0.0
+orbit_velocity_random = 0.0
+linear_accel = -67.72
+damping = 11.81
+angle = 45.0
+angle_random = 0.29
+scale = 3.75
+color_ramp = SubResource( 8 )
+hue_variation = -1.0
+hue_variation_random = 0.17
+
 [node name="Player" type="KinematicBody2D"]
 collision_mask = 15
 script = ExtResource( 2 )
@@ -91,4 +115,21 @@ collision_mask = 16
 shape = SubResource( 5 )
 one_way_collision = true
 
+[node name="CheckpointDetector" type="Area2D" parent="."]
+collision_layer = 0
+collision_mask = 32
+
+[node name="CollisionShape2D2" type="CollisionShape2D" parent="CheckpointDetector"]
+shape = SubResource( 5 )
+one_way_collision = true
+
+[node name="CheckpointParticle" type="Particles2D" parent="."]
+emitting = false
+amount = 50
+one_shot = true
+explosiveness = 1.0
+local_coords = false
+process_material = SubResource( 9 )
+
 [connection signal="body_entered" from="DeathDetector" to="." method="_on_DeathDetector_body_entered"]
+[connection signal="body_entered" from="CheckpointDetector" to="." method="_on_CheckpointDetector_body_entered"]
