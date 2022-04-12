@@ -24,6 +24,9 @@ const MAX_PEERS = 8
 #     Not very efficient on packets smaller than 4 KB. Recommended to use other compression algorithms in most cases.
 const COMPRESSION = NetworkedMultiplayerENet.COMPRESS_RANGE_CODER
 
+# Game base time (reference tick)
+var base_time:int = -1
+
 # Name for my player.
 var player_name = "no player name yet"
 var server_only: bool = true
@@ -96,7 +99,7 @@ func unregister_player(id):
 Start / stop game
 #####################"""
 
-remote func pre_start_game(players_init: Dictionary):
+remote func pre_start_game(players_init: Dictionary, base_time: int):
 	# Disable the main menu
 	get_node("/root/MenuContainer").queue_free()
 	# Preload the game scene
@@ -105,6 +108,7 @@ remote func pre_start_game(players_init: Dictionary):
 	
 	# Init the Game node
 	game.init(players_init)
+	self.base_time = base_time
 	
 	# Tell server we are ready to start
 	if not get_tree().is_network_server():
@@ -228,11 +232,14 @@ func begin_game():
 			"name": all_players[id],
 			"color_id": i
 		}
+	
+	# Determine a base epoch time
+	var base_time = OS.get_system_time_msecs()
 
 	# tell everyone to get readyD
 	for id in self.get_clients_list():
-		rpc_id(id, "pre_start_game", players_init)
-	pre_start_game(players_init)
+		rpc_id(id, "pre_start_game", players_init, base_time)
+	pre_start_game(players_init, base_time)
 
 remote func player_reached_finish(): # When a player reaches the end of the game
 	assert(get_tree().is_network_server())

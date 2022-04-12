@@ -14,16 +14,30 @@ var respawn_point: Vector2 = Vector2.ZERO
 
 puppet var puppet_velocity = Vector2.ZERO
 puppet var puppet_position = Vector2.ZERO
+puppet var puppet_state = {}
 
 var playable:bool = true
 
-master var remote_movement = Vector2()
-puppet var remote_transform = Transform()
+master var puppet_movement = Vector2()
+puppet var puppet_transform = Transform()
 puppet var remote_vel = Vector2()
 
-#client server reconciliation
-export var csr = true # Client Server Reconciliation
-var old_movement = Vector2()
+# Buffer containing the last two positions of the player
+# Used for interpolation
+var states_buffer = []
+# The entries have the shape:
+# 	[
+#		"time": int
+# 		"position": Vector2
+# 		"velocity": Vector2
+# 	]
+
+
+export var csr = false # Client Server Reconciliation
+export(float, 0, 200, 0.1) var packet_send_delay: float = 0 # Delay between outgoing packets
+# TODO: use the packet_send_delay property
+
+
 var time = 0
 var lastTime = 0
 
@@ -44,21 +58,27 @@ func init(color_id: int, pos: Vector2):
 func _process(delta):
 	animate()
 	
-
 func _physics_process(delta):
-	get_on_floor()
-	if playable:
-		get_input()
-	get_gravity()
-	
-	jump()
-	
-	multiplayer_movements(delta)
-	apply_movements()
-
-func get_on_floor():
+	# Floor y velocity
 	if is_on_floor():
 		velocity.y = 0
+	
+	# Player input
+	if playable: get_input()
+	
+	# Gravity
+	if velocity.y < MAX_SPEED.y:
+		velocity.y += GRAVITY
+	
+	# Jump
+	if Input.is_action_just_pressed("game_jump") and is_on_floor():
+		velocity.y = -JUMP_AMOUNT
+		$JumpParticle.restart()
+	
+	if is_network_master():
+		move_master(delta)
+	else:
+		move_puppet(delta)
 
 func get_input():
 	if is_network_master():
@@ -70,35 +90,94 @@ func get_input():
 		else:
 			velocity.x = lerp(velocity.x, target_speed, 0.3) # Slow down
 
-func get_gravity():
-	if velocity.y < MAX_SPEED.y:
-		velocity.y += GRAVITY
+#####################################
+#     MULTIPLAYER OPTIMISATION
+#####################################
 
-func multiplayer_movements(delta):
-	if is_network_master():
-		if csr:
-			rpc_unreliable("update_state",transform, velocity, time)
-		else:
-			rset_unreliable("remote_transform",transform)
-		
-		rset_unreliable("puppet_velocity", velocity) # used for the puppet's animations
-		rset_unreliable("puppet_position", position)
+#func move(delta):
+#	if is_network_master():
+#		if csr:
+#			rpc_unreliable("update_state",transform, velocity, time)
+#		else:
+#			rset_unreliable("remote_transform",transform)
+#		
+#		rset_unreliable("puppet_velocity", velocity) # used for the puppet's animations
+#		rset_unreliable("puppet_position", position)
+#	else:
+#		time += delta
+#		if csr:
+#			move_with_reconciliation()
+#		position = remote_position
+#		velocity = remote_velocity
+#	
+#	velocity  = move_and_slide(velocity, Vector2.UP)
+
+func move_master(delta: int):
+	if csr:
+		rset_unreliable("puppet_state", {
+			"time": OS.get_system_time_msecs() - Gamestate.base_time,
+			"position": position,
+			"velocity": velocity
+		})
 	else:
-		time += delta
-		if csr:
-			move_with_reconciliation()
+		rset_unreliable("puppet_velocity", velocity)
+		rset_unreliable("puppet_position", position)
+
+func move_puppet(delta: int):
+	if csr:
+		var new_state = puppet_state
+		# If we have data in the buffer and the last buffer's data's time is before the last packet's time
+		# OR there isn't any data in the buffer
+		if states_buffer.size() > 0 and states_buffer[states_buffer.size() - 1].time < new_state.time or states_buffer.size() == 0:
+			# The last recieved packet is a new one
+			states_buffer.append(new_state)
+		
+		# If we have more than two data in the states_buffer
+		while states_buffer.size() > 2: 
+			# Remove the 1st data
+			states_buffer.remove(0)
+		
+		if states_buffer.size() == 1:
+			pass
+		
+		if states_buffer.size() == 2:
+			pass
+			# interpolate()
+			
+		
+		
+		
+		# Interpolate the position between states_buffer[0] and states_buffer[1]
+		
+	else:
 		position = puppet_position
 		velocity = puppet_velocity
+	
+	
 
-func apply_movements():
-	# Already uses delta in it's implementation
-	velocity  = move_and_slide(velocity, Vector2.UP)
-	# print(collision)
+func move_with_reconciliation():
+	var old_transform = transform
+	transform = puppet_transform
+	var vel = remote_vel
+	vel = move_and_slide(vel, Vector2.UP)
+	
+	# interpolate(old_transform)
 
-func jump():
-	if Input.is_action_just_pressed("game_jump") and is_on_floor():
-		velocity.y = -JUMP_AMOUNT
-		$JumpParticle.restart()
+
+func interpolate(state_0, state_1, value):
+	var timeBetween = time - lastTime
+	lastTime = time
+	# transform.origin = old_transform.origin.linear_interpolate(transform.origin, timeBetween)
+
+
+puppet func update_state(t, velocity, lastTime_):
+	self.remote_transform = t
+	self.remote_vel = velocity
+	self.lastTime = lastTime_
+
+#####################################
+#     ANIMATION
+#####################################
 
 func animate():
 	if not is_on_floor():
@@ -115,21 +194,24 @@ func animate():
 	else:
 		$FootstepsParticle.set_emitting(false)
 
+#####################################
+#     COLLISION DETECTORS
+#####################################
+
+# Death
 func _on_DeathDetector_body_entered(body):
 	if not is_network_master(): return
 	position = respawn_point
 
-
+# Checkpoint
 func _on_CheckpointDetector_body_entered(body):
 	if not is_network_master(): return
 	if not body is TileMap: return
 	emit_signal("checkpoint", self.position)
 	respawn_point = position
-	print(body.get_position())
 	$CheckpointParticle.restart()
-	
 
-
+# Finish
 func _on_FinishDetector_body_entered(body):
 	if not is_network_master(): return
 	if get_tree().is_network_server():
@@ -140,22 +222,3 @@ func _on_FinishDetector_body_entered(body):
 	playable = false
 	velocity = Vector2.ZERO
 	$EndParticle.restart()
-
-
-func move_with_reconciliation():
-	var old_transform = transform
-	transform = remote_transform
-	var vel = remote_vel
-	vel = move_and_slide(vel, Vector2.UP)
-	
-	interpolate(old_transform)
-
-func interpolate(old_transform):
-	var timeBetween = time - lastTime
-	lastTime = time
-	transform.origin = old_transform.origin.linear_interpolate(transform.origin,timeBetween)
-
-puppet func update_state(t, velocity, lastTime_):
-	self.remote_transform = t
-	self.remote_vel = velocity
-	self.lastTime = lastTime_
