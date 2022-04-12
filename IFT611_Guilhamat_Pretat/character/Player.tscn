@@ -225,6 +225,11 @@ explosiveness = 1.0
 local_coords = false
 process_material = SubResource( 17 )
 
+[node name="PacketDelay" type="Timer" parent="."]
+wait_time = 0.016
+autostart = true
+
 [connection signal="body_entered" from="DeathDetector" to="." method="_on_DeathDetector_body_entered"]
 [connection signal="body_entered" from="CheckpointDetector" to="." method="_on_CheckpointDetector_body_entered"]
 [connection signal="body_entered" from="FinishDetector" to="." method="_on_FinishDetector_body_entered"]
+[connection signal="timeout" from="PacketDelay" to="." method="_on_PacketDelay_timeout"]

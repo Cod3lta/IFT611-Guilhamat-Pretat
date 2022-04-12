@@ -12,7 +12,7 @@ func init(players: Dictionary):
 	if get_tree().is_network_server():
 		init_server()
 	else:
-		$Gui/Control/HBoxContainer/CSRButton.set_disabled(true)
+		$Gui/Control/GridContainer/CSRButton.set_disabled(true)
 
 func init_client(players_init: Dictionary):
 	print("Players to init: ", players_init)
@@ -52,6 +52,10 @@ func _on_CSRButton_toggled(button_pressed):
 remote func toggle_csr(value):
 	var players: Node2D = get_node("/root/Game/Players")
 	if not get_tree().is_network_server():
-		$Gui/Control/HBoxContainer/CSRButton.set_pressed(value)
+		$Gui/Control/GridContainer/CSRButton.set_pressed(value)
 	for player in players.get_children():
 		player.csr = value
+
+
+func _on_HSlider_value_changed(value):
+	pass # Replace with function body.

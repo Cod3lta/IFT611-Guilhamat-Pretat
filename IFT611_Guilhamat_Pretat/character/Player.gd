@@ -75,6 +75,7 @@ func _physics_process(delta):
 		velocity.y = -JUMP_AMOUNT
 		$JumpParticle.restart()
 	
+	print("States buffer size : ", states_buffer.size())
 	if is_network_master():
 		move_master(delta)
 	else:
@@ -94,86 +95,73 @@ func get_input():
 #     MULTIPLAYER OPTIMISATION
 #####################################
 
-#func move(delta):
-#	if is_network_master():
-#		if csr:
-#			rpc_unreliable("update_state",transform, velocity, time)
-#		else:
-#			rset_unreliable("remote_transform",transform)
-#		
-#		rset_unreliable("puppet_velocity", velocity) # used for the puppet's animations
-#		rset_unreliable("puppet_position", position)
-#	else:
-#		time += delta
-#		if csr:
-#			move_with_reconciliation()
-#		position = remote_position
-#		velocity = remote_velocity
-#	
-#	velocity  = move_and_slide(velocity, Vector2.UP)
-
-func move_master(delta: int):
+func _on_PacketDelay_timeout():
 	if csr:
 		rset_unreliable("puppet_state", {
 			"time": OS.get_system_time_msecs() - Gamestate.base_time,
 			"position": position,
 			"velocity": velocity
 		})
+		
 	else:
 		rset_unreliable("puppet_velocity", velocity)
 		rset_unreliable("puppet_position", position)
 
-func move_puppet(delta: int):
+func move_master(delta: float):
+	pass# if not csr:
+	#	rset_unreliable("puppet_velocity", velocity)
+	#	rset_unreliable("puppet_position", position)
+	
+	velocity = move_and_slide(velocity, Vector2.UP)
+
+func move_puppet(delta: float):
 	if csr:
-		var new_state = puppet_state
+		var last_state = puppet_state
+		
+		# If the packet is empty, we skip
+		if last_state.size() == 0: return
+		
 		# If we have data in the buffer and the last buffer's data's time is before the last packet's time
 		# OR there isn't any data in the buffer
-		if states_buffer.size() > 0 and states_buffer[states_buffer.size() - 1].time < new_state.time or states_buffer.size() == 0:
+		if states_buffer.size() > 0 and states_buffer[states_buffer.size() - 1].time < last_state.time or states_buffer.size() == 0:
 			# The last recieved packet is a new one
-			states_buffer.append(new_state)
+			states_buffer.append(last_state)
 		
-		# If we have more than two data in the states_buffer
+		# While we have more than two data in the states_buffer
 		while states_buffer.size() > 2: 
-			# Remove the 1st data
+			# Remove the oldest data
 			states_buffer.remove(0)
 		
 		if states_buffer.size() == 1:
-			pass
+			# One state is not enough to do an interpolation
+			# So we do a direct assignation
+			position = states_buffer[0].position
 		
 		if states_buffer.size() == 2:
-			pass
-			# interpolate()
-			
-		
-		
-		
-		# Interpolate the position between states_buffer[0] and states_buffer[1]
-		
+			# Interpolate the position between states_buffer[0] and states_buffer[1]
+			var dist_state0_state1: float = states_buffer[1].time - states_buffer[0].time
+			var dist_state0_now: float = (OS.get_system_time_msecs() - Gamestate.base_time) - states_buffer[0].time
+			var weight: float = dist_state0_now / dist_state0_state1
+			interpolate(states_buffer[0], states_buffer[1], weight)
+	
 	else:
 		position = puppet_position
 		velocity = puppet_velocity
-	
-	
-
-func move_with_reconciliation():
-	var old_transform = transform
-	transform = puppet_transform
-	var vel = remote_vel
-	vel = move_and_slide(vel, Vector2.UP)
-	
-	# interpolate(old_transform)
 
 
-func interpolate(state_0, state_1, value):
-	var timeBetween = time - lastTime
-	lastTime = time
+func interpolate(state_0, state_1, weight: float):
+	assert(not is_network_master())
+	
 	# transform.origin = old_transform.origin.linear_interpolate(transform.origin, timeBetween)
+	var interpolated_position: Vector2 = state_0.position.linear_interpolate(state_1.position, weight)
+	var interpolated_velocity: Vector2 = state_0.velocity.linear_interpolate(state_1.velocity, weight)
+	
+	print("Interpolate: \t", state_0.position, "\t", state_1.position, "\t", weight, "\tNew position: ", interpolated_position)
+	
+	position = interpolated_position
+	# velocity = interpolated_velocity
+	# move_and_slide(interpolated_velocity, Vector2.UP)
 
-
-puppet func update_state(t, velocity, lastTime_):
-	self.remote_transform = t
-	self.remote_vel = velocity
-	self.lastTime = lastTime_
 
 #####################################
 #     ANIMATION
@@ -222,3 +210,5 @@ func _on_FinishDetector_body_entered(body):
 	playable = false
 	velocity = Vector2.ZERO
 	$EndParticle.restart()
+
+

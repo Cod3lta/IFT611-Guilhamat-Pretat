@@ -17,28 +17,42 @@ position = Vector2( 295, 66 )
 
 [node name="Control" type="Control" parent="Gui"]
 margin_right = 274.0
-margin_bottom = 40.0
+margin_bottom = 44.0
 
 [node name="ColorRect" type="ColorRect" parent="Gui/Control"]
 anchor_right = 1.0
 anchor_bottom = 1.0
 color = Color( 0, 0, 0, 0.266667 )
 
-[node name="HBoxContainer" type="HBoxContainer" parent="Gui/Control"]
-margin_left = 11.0
-margin_right = 277.0
+[node name="GridContainer" type="GridContainer" parent="Gui/Control"]
+margin_right = 40.0
 margin_bottom = 40.0
+columns = 2
 
-[node name="Label" type="Label" parent="Gui/Control/HBoxContainer"]
+[node name="Label" type="Label" parent="Gui/Control/GridContainer"]
 margin_top = 13.0
-margin_right = 176.0
+margin_right = 180.0
 margin_bottom = 27.0
-text = "Client-Server Reconciliation"
+text = "Interpolation / extrapolation"
 
-[node name="CSRButton" type="CheckButton" parent="Gui/Control/HBoxContainer"]
-margin_left = 180.0
-margin_right = 256.0
+[node name="CSRButton" type="CheckButton" parent="Gui/Control/GridContainer"]
+margin_left = 184.0
+margin_right = 260.0
 margin_bottom = 40.0
 focus_mode = 0
 
-[connection signal="toggled" from="Gui/Control/HBoxContainer/CSRButton" to="." method="_on_CSRButton_toggled"]
+[node name="Label2" type="Label" parent="Gui/Control/GridContainer"]
+visible = false
+margin_top = 45.0
+margin_right = 180.0
+margin_bottom = 59.0
+text = "Time between two packets"
+
+[node name="HSlider" type="HSlider" parent="Gui/Control/GridContainer"]
+visible = false
+margin_top = 44.0
+margin_right = 180.0
+margin_bottom = 60.0
+
+[connection signal="toggled" from="Gui/Control/GridContainer/CSRButton" to="." method="_on_CSRButton_toggled"]
+[connection signal="value_changed" from="Gui/Control/GridContainer/HSlider" to="." method="_on_HSlider_value_changed"]
