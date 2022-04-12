@@ -77,9 +77,9 @@ func _physics_process(delta):
 	
 	print("States buffer size : ", states_buffer.size())
 	if is_network_master():
-		move_master(delta)
+		move_master()
 	else:
-		move_puppet(delta)
+		move_puppet()
 
 func get_input():
 	if is_network_master():
@@ -96,6 +96,7 @@ func get_input():
 #####################################
 
 func _on_PacketDelay_timeout():
+	return
 	if csr:
 		rset_unreliable("puppet_state", {
 			"time": OS.get_system_time_msecs() - Gamestate.base_time,
@@ -106,15 +107,24 @@ func _on_PacketDelay_timeout():
 	else:
 		rset_unreliable("puppet_velocity", velocity)
 		rset_unreliable("puppet_position", position)
+		
+	velocity  = move_and_slide(velocity, Vector2.UP)
 
-func move_master(delta: float):
-	pass# if not csr:
-	#	rset_unreliable("puppet_velocity", velocity)
-	#	rset_unreliable("puppet_position", position)
-	
-	velocity = move_and_slide(velocity, Vector2.UP)
+func move_master():
+	if csr:
+		rset_unreliable("puppet_state", {
+			"time": OS.get_system_time_msecs() - Gamestate.base_time,
+			"position": position,
+			"velocity": velocity
+		})
+		
+	else:
+		rset_unreliable("puppet_velocity", velocity)
+		rset_unreliable("puppet_position", position)
+		
+	velocity  = move_and_slide(velocity, Vector2.UP)
 
-func move_puppet(delta: float):
+func move_puppet():
 	if csr:
 		var last_state = puppet_state
 		
